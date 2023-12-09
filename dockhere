@@ -55,6 +55,9 @@ DEFAULT_CONFIG = yaml.dump({
     'args': [],
     'env': [],
     'skipClientEnv': DEFAULT_SKIP_PASS_ENV,
+    'cli_args': [],
+    'cli_binary': 'docker',
+    'cli_mode': 'run',
 })
 HOME_CONFIG_PATH = os.path.expanduser("~/.dockhere.yaml")
 LOCAL_CONFIG_PATH = "./.dockhere.yaml"
@@ -126,15 +129,23 @@ if __name__ == "__main__":
                                      argument_default=argparse.SUPPRESS)
 
     parser.add_argument('-p', "--pull", action='store_true', help='pull the requested container')
-    parser.add_argument('-r', '--registry', help='pick a default registry')
+    parser.add_argument('-r', '--registry', dest='defaultRegistry', help='pick a default registry')
     parser.add_argument('-a', '--arch', help='specify a system architecture')
     parser.add_argument('-c', '--config', default=LOCAL_CONFIG_PATH, help='path to config file')
     parser.add_argument('-i', '--image', help='image name in image:tag format')
     parser.add_argument('-e', '--env', action='append', help='set environment variables')
     parser.add_argument('--client-env', action='store_true', default=False, help='pass the entire client environment')
-    parser.add_argument('--debug', action='store_true', default=False, help='enable dockhere debugging')
+
     parser.add_argument('cmd', nargs='?', help='command to run')
     parser.add_argument('args', nargs=argparse.REMAINDER, help='arguments for cmd')
+
+    parser.add_argument('--debug', action='store_true', default=False, help='enable dockhere debugging')
+
+    parser.add_argument('--cli-mode', default='run', help='docker command to run')
+    parser.add_argument('--cli-binary', default='docker', help='name or path of the docker binary')
+
+    # TODO: argparse does not like this, but it would still be nice to be able to pass this kind of thing to docker
+    # parser.add_argument("--cli-arg", action='append', dest='cli_args', help='extra arguments for docker itself')
 
     args = parser.parse_args()
 
@@ -146,12 +157,12 @@ if __name__ == "__main__":
         print(f'could not find config {args.config}')
         sys.exit(1)
 
-    cli_args = {}
-    for arg in ['pull', 'arch', 'image', 'cmd', 'args']:
+    cli_opts = {}
+    for arg in ['pull', 'arch', 'image', 'cmd', 'args', 'defaultRegistry', 'cli_binary', 'cli_args', 'cli_mode']:
         if hasattr(args, arg):
-            cli_args[arg] = getattr(args, arg)
+            cli_opts[arg] = getattr(args, arg)
 
-    config = hiyapyco.load(DEFAULT_CONFIG, HOME_CONFIG_PATH, args.config, yaml.dump(cli_args),
+    config = hiyapyco.load(DEFAULT_CONFIG, HOME_CONFIG_PATH, args.config, yaml.dump(cli_opts),
                            method=hiyapyco.METHOD_MERGE, failonmissingfiles=False, loglevelmissingfiles=logging.DEBUG)
 
     if DEBUG:
@@ -160,9 +171,6 @@ if __name__ == "__main__":
     # Clear the CLI args when we override the command but not the arguments
     if hasattr(args, 'cmd') and not hasattr(args, 'args'):
         config['args'] = []
-    # We use a different name for the registry CLI arg than in the config
-    if hasattr(args, 'registry'):
-        config['defaultRegistry'] = args.registry
 
     registry_id = config['defaultRegistry']
     if DEBUG:
@@ -177,8 +185,15 @@ if __name__ == "__main__":
     if DEBUG:
         print(f'Using image: {image}')
 
-    docker_cmd = ["docker", "run", "--interactive", "--tty", "--rm", "--arch", config['arch']]
+    docker_cmd = [config['cli_binary']]
 
+    if config['cli_mode'] == 'run':
+        docker_cmd += ["run", "--interactive", "--tty", "--rm"]
+    else:
+        print(f'Unsupported mode {config['cli_mode']}')
+        sys.exit(1)
+
+    docker_cmd += ["--arch", config['arch']]
     last_arch = get_last_run_arch(image)
     if last_arch is not None and last_arch != config['arch']:
         print(f'Architecture changed since last run, forcing a pull ({last_arch} => {config['arch']})')
@@ -235,6 +250,10 @@ if __name__ == "__main__":
     # Set the environment variables
     for k, v in envvars.items():
         docker_cmd += ["--env", f'{k}={v}']
+
+    # Add override arguments
+    for a in config['cli_args']:
+        docker_cmd.append(a)
 
     docker_cmd.append(image)
     docker_cmd.append(config['cmd'])
