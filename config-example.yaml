@@ -40,3 +40,14 @@ arch: arm64
 
 # Set the pull policy to "Always"
 pull: true
+
+# Set environment variables
+env:
+  - VAR=someValue
+  - AWS_PROFILE=default
+  - AWS_REGION=us-east-1
+
+# Environment variables to skip when using --client-env
+skipClientEnv:
+  - P9K_SSH
+  - P9K_TTY
