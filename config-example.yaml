@@ -33,7 +33,7 @@ image: ubuntu:latest
 
 # Set or override the default command and args
 cmd: /bin/bash
-args: []
+args: [ ]
 
 # Set or override the default architecture (defaults to your machine's platform)
 arch: arm64

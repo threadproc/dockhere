@@ -18,8 +18,36 @@ If you want to use a virtualenv for `dockhere`'s dependencies, you can add a scr
 exec /path/to/venv/bin/python /path/to/dockhere "$@"
 ```
 
+**Note:** if you want to use "app-mode" (see below), you should install these dependencies system-wide, or you will have
+difficulty calling `dockhere` with the correct `argv[0]` value to trigger app-mode! Alternatively, you could replace
+app-mode with a script like the following:
+
+```shell
+#!/bin/bash
+exec /path/to/venv/bin/python /path/to/dockhere "$0" -- "$@"
+```
+
 You will probably want to create a config file at `~/.dockhere.yaml` that has your default `volume` and `volumeMap`
 configuration (see the "Volumes" section below).
+
+### App Mode
+
+`dockhere` supports running in "app-mode", where it can be called as another binary, which it will then execute in a
+container using the default configuration for the working directory. It will also include the client environment by
+default (`--client-env`).
+
+To use app-mode, you can just create a symlink with the name of the binary and point it to `dockhere`. It will also
+automatically detect and strip the following prefixes (with or without a trailing hyphen):
+
+- the actual installed name of the `dockhere` script, if it is not `dockhere`
+- `dockhere`
+- `docker`
+- `dh`
+
+So if you create a symlink named `dh-make` or `dhmake` pointed at `dockhere`, it will automatically call `make` with
+the arguments passed. You cannot pass any arguments to `dockhere` when running in app-mode, so you should configure
+anything you require to run the desired container using `.dockhere.yaml` in either your `$HOME` directory or in the
+working directory.
 
 ## Config
 
@@ -30,6 +58,15 @@ By default, `dockhere` will load `~/.dockhere.yaml` and `.dockhere.yaml` (in the
 merge their config together with the default config. It will respect CLI flags first, then the local config
 file (or the file specified by `--config` on the command-line), then `~/.dockhere.yaml`, before falling
 back to the defaults.
+
+### Environment Variables
+
+| Key                          | Default             | Description                                                       |
+|------------------------------|---------------------|-------------------------------------------------------------------|
+| `DOCKHERE_DEBUG`             | false               | Debug mode (`--debug`)                                            |
+| `DOCKHERE_CLI_BINARY`        | `docker`            | Docker binary to use (`--cli-binary`)                             |
+| `DOCKHERE_CACHE`             | `~/.cache/dockhere` | Path to the cache file                                            |
+| `DOCKHERE_NOSKIP_UNDERSCORE` | false               | Do not skip variables starting with `_` when using `--client-env` |
 
 ## Usage
 
@@ -121,10 +158,10 @@ If you are not running on a platform that has a `update-binfmts` binary availabl
     ```shell
     echo ":rosetta:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x3e\x00:\xff\xff\xff\xff\xff\xfe\xfe\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/mnt/rosetta/rosetta:CF" > /proc/sys/fs/binfmt_misc/register
     ```
-    Note: this needs to be done as root on boot. Add this to `/etc/rc.local`, `/etc/local.d/rosetta.start`, etc as
-    appropriate for your OS.
+   Note: this needs to be done as root on boot. Add this to `/etc/rc.local`, `/etc/local.d/rosetta.start`, etc as
+   appropriate for your OS.
 
-Once the Rosetta binfmt handler is registered, `podman` should be able to run `amd64` arch containers by using the 
+Once the Rosetta binfmt handler is registered, `podman` should be able to run `amd64` arch containers by using the
 `--arch` flag.
 
 [utm-rosetta]: https://docs.getutm.app/advanced/rosetta/#enabling-rosetta
