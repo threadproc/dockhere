@@ -42,9 +42,9 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--registry', help='pick a default registry')
     parser.add_argument('-a', '--arch', help='specify a system architecture')
     parser.add_argument('-c', '--config', default=LOCAL_CONFIG_PATH, help='path to config file')
-    parser.add_argument('image', nargs='?', help='image name in image:tag format')
+    parser.add_argument('-i', '--image', help='image name in image:tag format')
     parser.add_argument('cmd', nargs='?', help='command to run')
-    parser.add_argument('args', nargs='*')
+    parser.add_argument('args', nargs=argparse.REMAINDER, help='arguments for cmd')
 
     args = parser.parse_args()
 
