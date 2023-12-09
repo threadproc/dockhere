@@ -1,0 +1,42 @@
+# Custom registries to use with the --registry flag
+registries:
+  docker: docker.io
+  my_registry: some_domain
+
+# The default registry to use when not otherwise specified. If the
+# specified registry cannot be found in the registries map, it will
+# be prepended to the image name.
+defaultRegistry: docker
+
+# This is a docker CLI-compatible list of volumes to automatically
+# mount to all launched containers.
+#
+# If you are using a remote docker host, these paths should be
+# based on the host machine, not your client machine. As well,
+# the destination path is what you should use in volumeMap for
+# determining the mapping from cwd to the container.
+volumes:
+  - /media/host:/media/host
+
+# volumeMap represents a map between your local machine and
+# the location inside of the container.
+#
+# This is used when you are connecting to a remote host and
+# need to do a conversion map. If dockhere cannot find an
+# entry in this map for your cwd, it will NOT change the
+# workdir in the launched container.
+volumeMap:
+  "/Users/myuser/src": /media/host/src
+
+# Set or override the default image
+image: ubuntu:latest
+
+# Set or override the default command and args
+cmd: /bin/bash
+args: []
+
+# Set or override the default architecture (defaults to your machine's platform)
+arch: arm64
+
+# Set the pull policy to "Always"
+pull: true
