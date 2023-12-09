@@ -43,10 +43,13 @@ if __name__ == "__main__":
     parser.add_argument('-a', '--arch', help='specify a system architecture')
     parser.add_argument('-c', '--config', default=LOCAL_CONFIG_PATH, help='path to config file')
     parser.add_argument('-i', '--image', help='image name in image:tag format')
+    parser.add_argument('--debug', action='store_true', default=False, help='enable dockhere debugging')
     parser.add_argument('cmd', nargs='?', help='command to run')
     parser.add_argument('args', nargs=argparse.REMAINDER, help='arguments for cmd')
 
     args = parser.parse_args()
+
+    DEBUG = args.debug
 
     if args.config != LOCAL_CONFIG_PATH and not os.path.exists(args.config):
         print(f'could not find config {args.config}')
@@ -59,6 +62,9 @@ if __name__ == "__main__":
 
     config = hiyapyco.load(DEFAULT_CONFIG, HOME_CONFIG_PATH, args.config, yaml.dump(cli_args), method=hiyapyco.METHOD_MERGE, failonmissingfiles=False, loglevelmissingfiles=logging.DEBUG)
 
+    if DEBUG:
+        print(hiyapyco.dump(config))
+
     # Clear the CLI args when we override the command but not the arguments
     if hasattr(args, 'cmd') and not hasattr(args, 'args'):
         config['args'] = []
@@ -67,11 +73,17 @@ if __name__ == "__main__":
         config['defaultRegistry'] = args.registry
 
     registry_id = config['defaultRegistry']
+    if DEBUG:
+        print(f'Using default registry: {registry_id}')
+
     registry = registry_id
     if registry_id in config['registries']:
         registry = config['registries'][registry_id]
 
     image = f'{registry}/{config['image']}'
+
+    if DEBUG:
+        print(f'Using image: {image}')
 
     docker_cmd = ["docker", "run", "--interactive", "--tty", "--rm", "--arch", config['arch']]
     if config['pull']:
@@ -90,6 +102,10 @@ if __name__ == "__main__":
                 dest_path = cont_path
             else:
                 dest_path = f'{cont_path}{pwd[len(host_path)+1:]}'
+
+            if DEBUG:
+                print(f'Mapping current directory to {dest_path}')
+
             break
 
     if dest_path is None:
@@ -100,5 +116,8 @@ if __name__ == "__main__":
     docker_cmd.append(image)
     docker_cmd.append(config['cmd'])
     docker_cmd += config['args']
+
+    if DEBUG:
+        print(f'{' '.join(docker_cmd)}\n')
 
     os.execvp(docker_cmd[0], docker_cmd)
